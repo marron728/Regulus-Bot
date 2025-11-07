@@ -3,48 +3,32 @@ from discord.ext import commands
 import os
 import asyncio
 from dotenv import load_dotenv
+from flask import Flask
+from threading import Thread
 
-# .envファイルからTOKENなどを読み込む
+# .envファイルからTOKENを読み込む（ローカル動作用）
 load_dotenv()
-
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-# Botの設定
+# Bot設定
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# 起動時の処理
-@bot.event
-async def on_ready():
-    print(f"✅ {bot.user} としてログインしました。")
-    await bot.change_presence(activity=discord.Game(name="WS・RSイベント管理中"))
+# Flaskサーバー設定
+app = Flask(__name__)
 
-    # Cogsをロード
-    initial_extensions = [
-        "cogs.ws_module",
-        "cogs.rs_module",
-        "cogs.role_utils",
-        "cogs.scheduler",
-        "cogs.setup_utils"
-    ]
-    for ext in initial_extensions:
-        try:
-            await bot.load_extension(ext)
-            print(f"📦 {ext} をロードしました。")
-        except Exception as e:
-            print(f"❌ {ext} のロード中にエラー: {e}")
+@app.route('/')
+def home():
+    return "Regulus-Bot is running!", 200
 
-# エラー処理
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("⚠️ 権限が不足しています。管理者のみ実行可能です。")
-    else:
-        await ctx.send(f"❌ エラーが発生しました: {error}")
+def run_flask_server():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
 
-# Botを起動
-if __name__ == "__main__":
-    if not TOKEN:
-        print("❌ DISCORD_TOKEN が設定されていません。")
-    else:
-        bot.run(TOKEN)
+def start_bot_and_server():
+    t = Thread(target=run_flask_server)
+    t.start()
+    bot.run(TOKEN)
+
+if __name__ == '__main__':
+    start_bot_and_server()
